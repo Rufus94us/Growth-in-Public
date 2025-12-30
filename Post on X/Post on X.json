@@ -1,0 +1,570 @@
+{
+  "name": "Post on X",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 8
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-0000-0000-000000000001",
+      "name": "6:30 pm",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        -320,
+        272
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Automatisation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 0,
+          "mode": "list",
+          "cachedResultName": "Post tweeter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "Check": "Done",
+            "Tweet_origin": "={{ $('Get 1st tweet in sheet').item.json.Tweet_origin }}",
+            "Lien": "=https://x.com/i/status/{{ $json.data.id }}",
+            "Tweet_modified": "={{ $json.data.text }}"
+          },
+          "matchingColumns": [
+            "Tweet_origin"
+          ],
+          "schema": [
+            {
+              "id": "user_ID",
+              "displayName": "user_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_origin",
+              "displayName": "Tweet_origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "image_urls",
+              "displayName": "image_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_images",
+              "displayName": "has_images",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "video_urls",
+              "displayName": "video_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_videos",
+              "displayName": "has_videos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "media_type ",
+              "displayName": "media_type ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_modified",
+              "displayName": "Tweet_modified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lien",
+              "displayName": "Lien",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Check",
+              "displayName": "Check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pagination_token",
+              "displayName": "Pagination_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1232,
+        112
+      ],
+      "id": "00000000-0000-0000-0000-000000000002",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Automatisation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 0,
+          "mode": "list",
+          "cachedResultName": "Post tweeter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "username"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        128,
+        272
+      ],
+      "id": "00000000-0000-0000-0000-000000000003",
+      "name": "Copy tons",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Automatisation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 0,
+          "mode": "list",
+          "cachedResultName": "Post tweeter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Check",
+              "lookupValue": "A poster"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        128,
+        96
+      ],
+      "id": "00000000-0000-0000-0000-000000000004",
+      "name": "Get 1st tweet in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        496,
+        112
+      ],
+      "id": "00000000-0000-0000-0000-000000000005",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n\nconst k = 10;\nconst input = $input.all();\n\nif (input.length === 0) {\n  return [{ json: { items: [] } }];\n}\n\n// Shuffle (Fisher–Yates)\nconst arr = [...input];\nfor (let i = arr.length - 1; i > 0; i--) {\n  const j = Math.floor(Math.random() * (i + 1));\n  [arr[i], arr[j]] = [arr[j], arr[i]];\n}\n\nconst selected = arr.slice(0, Math.min(k, arr.length));\n\n// 1 seul item de sortie, avec une liste de 10 items (leurs json)\nreturn [\n  {\n    json: {\n      items: selected.map((it) => it.json),\n      count: selected.length,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        272
+      ],
+      "id": "00000000-0000-0000-0000-000000000006",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Input JSON:\n{\n  \"tweet_to_rewrite\": {{ $json.Tweet_origin }},\n  \"style_reference_tweets\": {{ $items(\"Code in JavaScript\")[0].json.items.map((t,i)=>`T${i+1}:\\n${t.Tweet_origin}`).join(\"\\n\\n---\\n\\n\") }}\n}\n\nTask:\nFrom the provided tweets list:\n1) use the ORIGINAL tweet as tweet_to_rewrite.\n2) Use the remaining tweets ONLY as style_reference_tweets to match the user's tone (cadence, punctuation, emoji habits, vibe). Do NOT copy phrases.\n3) Rewrite in ENGLISH as a seasoned SaaS builder, with totally new content weaving: vibe-coding + entrepreneurship + AI + SaaS.\n4) Ensure the final tweet length is 180–259 characters (spaces included), ideally 220–240.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Tu es "TweetRewriter-180-259".\n\nMission:\nTu dois réécrire UN tweet cible en conservant AU MAXIMUM:\n- l'idée centrale (ce que le tweet veut dire),\n- l'intention (humour / observation / frustration / insight),\n- la structure (1 phrase, 2 phrases, punchline, question, etc.),\ntout en changeant les mots et en améliorant légèrement la valeur pour les autres.\n\nImportant:\nLe tweet final doit rester TRÈS PROCHE du tweet original après nettoyage.\nTu n'as PAS le droit de changer de sujet.\n\nPré-traitement (TRÈS IMPORTANT):\nAvant d'analyser le tweet cible et les tweets de référence, tu dois les "nettoyer" mentalement en ignorant/supprimant:\n- Tous les liens\n- Les placeholders d'images/medias quand ça ne sert pas au ton\n- Les entités bizarres (ex: ">", "&", etc.) → traite ">" comme du bruit\nObjectif: ne pas laisser ces éléments influencer le style ni le contenu final.\n- N'utilise jamais ce symbole \"—\" pour écrire des tweets\n\nThèmes autorisés (petite touche uniquement):\n- vibe-coding\n- IA (outil, assistant, copilot, workflow)\n- SaaS (produit, ship, itération, UX, bugs)\n\nRègles de réécriture:\n1) Entrée = un JSON avec:\n- \"tweet_to_rewrite\"\n- \"style_reference_tweets\"\n\n2) Proximité obligatoire (anti-dérive):\n- Garde le même contexte, la même scène, et la même "punchline intention".\n- Conserve 2 à 4 mots-clés (noms communs) DU TWEET CIBLE après nettoyage (ex: "cafe", "keyboard", "code", "bug"…).\n- Ne rajoute qu'UNE micro-idée max liée à IA/SaaS (1 détail), sinon tu t'éloignes trop.\n\n3) Changement de forme:\n- Ne réutilise pas plus de 3 mots consécutifs du tweet cible (après nettoyage).\n- Pas de paraphrase mot-à-mot: reformule, change le rythme, mais même idée.\n\n4) Langue:\n- Écris en ANGLAIS.\n\n5) Authenticité:\n- N'invente pas de faits personnels.\n- Pas de chiffres non justifiés.\n\n6) Interdictions:\n- Aucun lien\n- Aucune mention @\n- Aucun call-to-action (pas de "try", "DM", "check", "sign up", "comment", etc.)\n\n7) Longueur:\n- 180 à 259 caractères inclus. Vise 220–240.\n\nSortie:\nRessort la sortie selon le format exact attendu par le Output Parser."
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        688,
+        112
+      ],
+      "id": "00000000-0000-0000-0000-000000000007",
+      "name": "LLM tweet maker",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"{{ $json.output.rewritten_tweet }}\",\n  \"community_id\": \"YOUR_COMMUNITY_ID\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1024,
+        112
+      ],
+      "id": "00000000-0000-0000-0000-000000000008",
+      "name": "Récupère les Tweet d'un user",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "X account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "**Configure your X credential and choose a community (optionnal)",
+        "height": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        960,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "00000000-0000-0000-0000-000000000009",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "**Configure your google sheet credential (sheets must be set up with all origin tweets)\n\n**Copy tons node need to be set up the username of the user you want to copy",
+        "height": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        48,
+        -80
+      ],
+      "typeVersion": 1,
+      "id": "00000000-0000-0000-0000-000000000010",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "model": "openai/chatgpt-4o-latest",
+        "options": {
+          "frequencyPenalty": 0,
+          "presencePenalty": 0,
+          "temperature": 0.7,
+          "topP": 0.9
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        688,
+        272
+      ],
+      "id": "00000000-0000-0000-0000-000000000011",
+      "name": "OpenRouter Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"rewritten_tweet\": \"...\",\n  \"themes\": [\"vibe-coding\",\"entrepreneuriat\",\"IA\"],\n  \"notes\": \"char_count=XXX; selected=...;\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        864,
+        272
+      ],
+      "id": "00000000-0000-0000-0000-000000000012",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "content": "** I'm using OpenRouter but you can use any LLMs of your choice",
+        "height": 512,
+        "width": 304,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        656,
+        -64
+      ],
+      "typeVersion": 1,
+      "id": "00000000-0000-0000-0000-000000000013",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "6:30 pm": {
+      "main": [
+        [
+          {
+            "node": "Get 1st tweet in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Copy tons",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get 1st tweet in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "LLM tweet maker",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy tons": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "LLM tweet maker": {
+      "main": [
+        [
+          {
+            "node": "Récupère les Tweet d'un user",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Récupère les Tweet d'un user": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "LLM tweet maker",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "LLM tweet maker",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {},
+  "tags": []
+}
