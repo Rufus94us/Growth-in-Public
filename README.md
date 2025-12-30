@@ -23,4 +23,7 @@ The first workflow shared here is **Post on X** — a simple automation to publi
 - In n8n: **Workflows → Import**
 - Open the imported workflow and configure your credentials
 
+## Download the workflows JSON
+[⬇️ Download "Post on X" workflow JSON](https://raw.githubusercontent.com/Rufus94us/N8N_Growth/refs/heads/main/Post%20on%20X/Post%20on%20X.json)
+
 Like and follow on X, DMs if you need any help, See u
