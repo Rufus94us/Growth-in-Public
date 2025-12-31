@@ -24,6 +24,9 @@ The first workflow shared here is **Post on X** — a simple automation to publi
 - Open the imported workflow and configure your credentials
 
 ## Download the workflows JSON
+
+Post on X:
 [⬇️ Download "Post on X" workflow JSON](https://raw.githubusercontent.com/Rufus94us/N8N_Growth/refs/heads/main/Post%20on%20X/Post%20on%20X.json)
+[⬇️ Download Google Sheet](https://docs.google.com/spreadsheets/d/e/2PACX-1vQFBYuR88v2Rf3s0ivdGau1QZo0nWT41ZdyfCoqKSTSafLcCZXN6ywUT-Kj4ty-H2pF9jqEfN5YSsgg/pub?output=xlsx)
 
 Like and follow on X, DMs if you need any help, See u

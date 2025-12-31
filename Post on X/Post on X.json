@@ -359,7 +359,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"text\": \"{{ $json.output.rewritten_tweet }}\",\n  \"community_id\": \"YOUR_COMMUNITY_ID\"\n}",
+        "jsonBody": "={\n  \"text\": {{ JSON.stringify($json.output.rewritten_tweet) }},\n  \"community_id\": \"1493446837214187523\"\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
