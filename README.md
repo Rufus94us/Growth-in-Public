@@ -26,7 +26,7 @@ The first workflow shared here is **Post on X** — a simple automation to publi
 ## Download the workflows JSON
 
 ### Post on X
-[⬇️ Download "Post on X" workflow JSON](https://raw.githubusercontent.com/Rufus94us/N8N_Growth/refs/heads/main/Post%20on%20X/Post%20on%20X.json)
+[⬇️ Download "Post on X" workflow JSON](https://raw.githubusercontent.com/Rufus94us/Growth-in-Public/refs/heads/main/N8N/Post%20on%20X/Post%20on%20X.json)
 [⬇️ Download Google Sheet](https://docs.google.com/spreadsheets/d/e/2PACX-1vQFBYuR88v2Rf3s0ivdGau1QZo0nWT41ZdyfCoqKSTSafLcCZXN6ywUT-Kj4ty-H2pF9jqEfN5YSsgg/pub?output=xlsx)
 
 ---
@@ -40,9 +40,8 @@ Retrieve tweets from any X user using the **free tier X API** (100 requests/mont
 - 🖼️ Extract images and videos from tweets
 - 📊 Save to Google Sheets automatically
 
-[⬇️ Download "Get content from X - Free X API" workflow JSON](YOUR_WORKFLOW_JSON_LINK)
-[⬇️ Download Google Sheet template](YOUR_GOOGLE_SHEET_LINK)
+[⬇️ Download "Get content from X - Free X API" workflow JSON](https://raw.githubusercontent.com/Rufus94us/Growth-in-Public/refs/heads/main/N8N/Get%20content%20from%20X/Get%20content%20from%20X%20-%20Free%20X%20API.json)
 
 ---
 
-Like and follow on X, DMs if you need any help, See u
+Like and follow on X @RugSlay3r, DMs if you need any help, See u
