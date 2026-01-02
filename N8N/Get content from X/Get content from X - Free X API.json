@@ -1,0 +1,632 @@
+{
+  "name": "Get content from X - Free X API",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -32,
+        -16
+      ],
+      "id": "03796025-09d3-4cf1-915e-d4b3e53274d3",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Your Sheet Name",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "YOUR_SHEET_GID",
+          "mode": "list",
+          "cachedResultName": "Your Tab Name",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=YOUR_SHEET_GID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Tweet_origin": "={{ $json.text }}",
+            "user_ID": "={{ $json.author_id }}",
+            "Pagination_token": "={{ $(\"Retrieve the user's tweets\").item.json.meta.next_token }}",
+            "username": "={{ $(\"Retrieve the user's tweets\").item.json.includes.users[0].username }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "user_ID",
+              "displayName": "user_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_origin",
+              "displayName": "Tweet_origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_modified",
+              "displayName": "Tweet_modified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pagination_token",
+              "displayName": "Pagination_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Check",
+              "displayName": "Check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        640,
+        -16
+      ],
+      "id": "c2bc2ad2-119f-4134-8573-e09694bd22cf",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        416,
+        -16
+      ],
+      "id": "1cf2f2d7-e1b5-4faa-8f79-78e2dd535566",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        -320
+      ],
+      "id": "1d93e625-75ad-4e55-94e2-afcc59de2262",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Récupère les données de l'API X\nconst apiResponse = $input.first().json;\n\n// Crée un map des médias depuis includes.media\nconst mediaMap = {};\nif (apiResponse.includes && apiResponse.includes.media) {\n  for (const media of apiResponse.includes.media) {\n    mediaMap[media.media_key] = {\n      url: media.url || media.preview_image_url || null,\n      preview_url: media.preview_image_url || null,\n      type: media.type,\n      width: media.width,\n      height: media.height,\n      duration_ms: media.duration_ms || null\n    };\n  }\n}\n\n// Enrichit chaque tweet avec ses médias\nconst enrichedTweets = [];\nif (apiResponse.data) {\n  for (const tweet of apiResponse.data) {\n    const images = [];\n    const videos = [];\n    \n    // Vérifie si le tweet a des attachements media\n    if (tweet.attachments && tweet.attachments.media_keys) {\n      for (const mediaKey of tweet.attachments.media_keys) {\n        if (mediaMap[mediaKey]) {\n          const media = mediaMap[mediaKey];\n          if (media.type === 'video' || media.type === 'animated_gif') {\n            videos.push(media);\n          } else if (media.type === 'photo') {\n            images.push(media);\n          }\n        }\n      }\n    }\n    \n    enrichedTweets.push({\n      ...tweet,\n      images: images,\n      videos: videos,\n      image_urls: images.map(img => img.url).filter(url => url).join(', '),\n      video_urls: videos.map(vid => vid.url).filter(url => url).join(', '),\n      video_preview_urls: videos.map(vid => vid.preview_url).filter(url => url).join(', '),\n      has_images: images.length > 0,\n      has_videos: videos.length > 0,\n      media_type: videos.length > 0 ? 'video' : (images.length > 0 ? 'photo' : 'text')\n    });\n  }\n}\n\n// Retourne les tweets enrichis avec les métadonnées\nreturn enrichedTweets.map(tweet => ({\n  json: {\n    ...tweet,\n    _meta: {\n      next_token: apiResponse.meta?.next_token,\n      username: apiResponse.includes?.users?.[0]?.username,\n      user_name: apiResponse.includes?.users?.[0]?.name\n    }\n  }\n}));"
+      },
+      "id": "7267a275-8461-47a1-818f-b1ca218a1dba",
+      "name": "Map Images to Tweets",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        464,
+        560
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk",
+          "cachedResultName": "Your Sheet Name"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_SHEET_GID",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=YOUR_SHEET_GID",
+          "cachedResultName": "Your Tab Name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_ID": "={{ $json.author_id }}",
+            "username": "={{ $json._meta.username }}",
+            "has_images": "={{ $json.has_images }}",
+            "has_videos": "={{ $json.has_videos }}",
+            "image_urls": "={{ $json.image_urls }}",
+            "video_urls": "={{ $json.video_urls }}",
+            "Tweet_origin": "={{ $json.text }}",
+            "Pagination_token": "={{ $json._meta.next_token }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "user_ID",
+              "displayName": "user_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_origin",
+              "displayName": "Tweet_origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "image_urls",
+              "displayName": "image_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_images",
+              "displayName": "has_images",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "video_urls",
+              "displayName": "video_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_videos",
+              "displayName": "has_videos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "media_type ",
+              "displayName": "media_type ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_modified",
+              "displayName": "Tweet_modified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lien",
+              "displayName": "Lien",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Check",
+              "displayName": "Check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pagination_token",
+              "displayName": "Pagination_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "dce09464-638c-432b-bc40-ce0698a48fb6",
+      "name": "Append row in sheet1",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        736,
+        560
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Retrieve the user's ID\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n# Retrieve the user's tweets with pagination token",
+        "height": 272,
+        "width": 1312
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        -416
+      ],
+      "typeVersion": 1,
+      "id": "0d65b2f2-29ef-4331-9cee-04331fff72f1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# Retrieve the user's tweets",
+        "height": 416,
+        "width": 1312
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        -144
+      ],
+      "typeVersion": 1,
+      "id": "2d49ea90-4b31-4489-9d49-24393f3d2d63",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nConfigure your Header from the X API and use the userID retrieved earlier\n\nThis node excludes the comments, quote and retweet to have only the original tweets of the selected user..\n\nPersonalize it to your liking\n\nX API give you only 100 read/month..",
+        "height": 496,
+        "width": 272,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        112,
+        -64
+      ],
+      "typeVersion": 1,
+      "id": "f55ea9e0-e93b-4474-ac0d-7a53803a7307",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "url": "https://api.x.com/2/users/YOUR_USER_ID/tweets",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "max_results",
+              "value": "100"
+            },
+            {
+              "name": "tweet.fields",
+              "value": "created_at,public_metrics"
+            },
+            {
+              "name": "expansions",
+              "value": "author_id"
+            },
+            {
+              "name": "user.fields",
+              "value": "username,name"
+            },
+            {
+              "name": "exclude",
+              "value": "retweets,replies"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_X_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        -16
+      ],
+      "id": "ee4ae84d-abbe-4475-b5a6-55f2f71632a0",
+      "name": "Retrieve the user's tweets"
+    },
+    {
+      "parameters": {
+        "url": "https://api.x.com/2/users/by/username/YOUR_USERNAME",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_X_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        192,
+        -320
+      ],
+      "id": "cdf31eed-3309-4744-9d17-95435c14c4ca",
+      "name": "Retrieve the user's ID"
+    },
+    {
+      "parameters": {
+        "url": "https://api.x.com/2/users/YOUR_USER_ID/tweets",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "max_results",
+              "value": "100"
+            },
+            {
+              "name": "tweet.fields",
+              "value": "created_at,public_metrics,attachments"
+            },
+            {
+              "name": "expansions",
+              "value": "author_id,attachments.media_keys"
+            },
+            {
+              "name": "user.fields",
+              "value": "username,name"
+            },
+            {
+              "name": "media.fields",
+              "value": "url,type,height,width,duration_ms,preview_image_url"
+            },
+            {
+              "name": "exclude",
+              "value": "retweets,replies"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_X_API_BEARER_TOKEN"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2d95b31-0cec-4947-a532-b0488f348e8c",
+      "name": "Retrieve the user's tweets - with images/videos",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        224,
+        560
+      ],
+      "typeVersion": 4.3
+    },
+    {
+      "parameters": {
+        "content": "# Retrieve the user's tweets with images and videos",
+        "height": 304,
+        "width": 1312
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "04814c70-1044-4afd-b6b8-04f29f9e5a40",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        560
+      ],
+      "id": "a18fa3a4-b4aa-47c9-84d1-f6cc5e13ade7",
+      "name": "Schedule Trigger1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Retrieve the user's tweets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Retrieve the user's ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Images to Tweets": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve the user's tweets": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve the user's tweets - with images/videos": {
+      "main": [
+        [
+          {
+            "node": "Map Images to Tweets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Retrieve the user's tweets - with images/videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
