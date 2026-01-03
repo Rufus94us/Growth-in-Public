@@ -1,0 +1,301 @@
+{
+  "name": "Get content from X - APIFY",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        512
+      ],
+      "id": "YOUR_NODE_ID_1",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/kaitoeasyapi~twitter-x-data-tweet-scraper-pay-per-result-cheapest/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n\"twitterContent\": \"-filter:retweets -filter:replies -filter:quote\",\n    \"maxItems\": 200,\n    \"queryType\": \"Latest\",\n    \"from\": \"YOUR_TARGET_USERNAME\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        16,
+        512
+      ],
+      "id": "YOUR_NODE_ID_2",
+      "name": "SEARCH TWEET",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_APIFY_CREDENTIAL_ID",
+          "name": "Apify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parser optimisé pour les données Apify Twitter Scraper\n// Chaque item contient directement les informations du tweet\n\nreturn items.map((item) => {\n  const tweet = item.json;\n\n  // Extraction des données principales\n  const tweetData = {\n    // === IDENTIFIANTS ===\n    tweetId: tweet.id || null,\n    url: tweet.url || tweet.twitterUrl || null,\n    conversationId: tweet.conversationId || null,\n    \n    // === CONTENU ===\n    text: tweet.text || '',\n    lang: tweet.lang || null,\n    createdAt: tweet.createdAt || null,\n    source: tweet.source || null,\n    \n    // === AUTEUR ===\n    author: {\n      id: tweet.author?.id || null,\n      username: tweet.author?.userName || null,\n      name: tweet.author?.name || null,\n      verified: tweet.author?.isVerified || false,\n      blueVerified: tweet.author?.isBlueVerified || false,\n      profilePicture: tweet.author?.profilePicture || null,\n      coverPicture: tweet.author?.coverPicture || null,\n      description: tweet.author?.description || null,\n      location: tweet.author?.location || null,\n      followers: tweet.author?.followers || 0,\n      following: tweet.author?.following || 0,\n      statusesCount: tweet.author?.statusesCount || 0,\n      createdAt: tweet.author?.createdAt || null\n    },\n    \n    // === STATISTIQUES ===\n    stats: {\n      likes: tweet.likeCount || 0,\n      retweets: tweet.retweetCount || 0,\n      replies: tweet.replyCount || 0,\n      quotes: tweet.quoteCount || 0,\n      views: tweet.viewCount || 0,\n      bookmarks: tweet.bookmarkCount || 0\n    },\n    \n    // === CONTEXTE DU TWEET ===\n    isReply: tweet.isReply || false,\n    isPinned: tweet.isPinned || false,\n    isConversationControlled: tweet.isConversationControlled || false,\n    \n    // === RÉPONSE À ===\n    inReplyTo: tweet.inReplyToUserId ? {\n      userId: tweet.inReplyToUserId || null,\n      username: tweet.inReplyToUsername || null,\n      tweetId: tweet.inReplyToId || null\n    } : null,\n    \n    // === ENTITÉS (hashtags, mentions, urls) ===\n    hashtags: (tweet.entities?.hashtags || [])\n      .map(h => h.text || h.tag)\n      .filter(Boolean),\n      \n    mentions: (tweet.entities?.user_mentions || [])\n      .map(m => m.screen_name || m.username)\n      .filter(Boolean),\n      \n    urls: (tweet.entities?.urls || [])\n      .map(u => ({\n        url: u.url || null,\n        expanded: u.expanded_url || null,\n        display: u.display_url || null\n      }))\n      .filter(u => u.url),\n    \n    // === MEDIA ===\n    media: (tweet.extendedEntities?.media || tweet.entities?.media || [])\n      .map(m => ({\n        type: m.type || null,\n        url: m.media_url_https || m.media_url || null,\n        previewUrl: m.display_url || null,\n        videoUrl: m.video_info?.variants?.[0]?.url || null\n      }))\n      .filter(m => m.url),\n    \n    // === TWEETS LIÉS ===\n    quotedTweet: tweet.quoted_tweet ? {\n      id: tweet.quoted_tweet.id || null,\n      text: tweet.quoted_tweet.text || null,\n      author: tweet.quoted_tweet.author?.userName || null\n    } : null,\n    \n    retweetedTweet: tweet.retweeted_tweet ? {\n      id: tweet.retweeted_tweet.id || null,\n      text: tweet.retweeted_tweet.text || null,\n      author: tweet.retweeted_tweet.author?.userName || null\n    } : null,\n    \n    // === TYPE DE TWEET ===\n    type: tweet.retweeted_tweet ? 'retweet' : \n          tweet.isReply ? 'reply' : \n          tweet.quoted_tweet ? 'quote' : \n          'original',\n    \n    // === AUTRES ===\n    card: tweet.card || null,\n    place: tweet.place || null\n  };\n\n  return { json: tweetData };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        512
+      ],
+      "id": "YOUR_NODE_ID_3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "content": "## APIFY actor\nConfigure your APIFY credential\nActor cost: 0.25$/1000 tweets\n\nActor page: https://console.apify.com/actors/CJdippxWmn9uRfooo/information/1.0.479/readme\n",
+        "height": 416
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "YOUR_NODE_ID_4",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Google Sheets\nConfigure your Google Sheets credential\n\nTemplate sheet available here: https://docs.google.com/spreadsheets/d/YOUR_TEMPLATE_SHEET_ID/edit\n",
+        "height": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1,
+      "id": "YOUR_NODE_ID_5",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk",
+          "cachedResultName": "Your Sheet Name"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_SHEET_GID",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=YOUR_SHEET_GID",
+          "cachedResultName": "Your Tab Name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_ID": "={{ $json.author.id }}",
+            "username": "={{ $json.author.username }}",
+            "Tweet_origin": "={{ $json.text }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "user_ID",
+              "displayName": "user_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "username",
+              "displayName": "username",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_origin",
+              "displayName": "Tweet_origin",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "image_urls",
+              "displayName": "image_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_images",
+              "displayName": "has_images",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "video_urls",
+              "displayName": "video_urls",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "has_videos",
+              "displayName": "has_videos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "media_type ",
+              "displayName": "media_type ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tweet_modified",
+              "displayName": "Tweet_modified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lien",
+              "displayName": "Lien",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Check",
+              "displayName": "Check",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Pagination_token",
+              "displayName": "Pagination_token",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "YOUR_NODE_ID_6",
+      "name": "Append row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        464,
+        512
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "SEARCH TWEET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEARCH TWEET": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
