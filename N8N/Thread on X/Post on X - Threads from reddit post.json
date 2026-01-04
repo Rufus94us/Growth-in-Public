@@ -1,0 +1,877 @@
+{
+  "name": "Post on X - Threads from reddit post",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## ID community\nBuild in public YOUR_COMMUNITY_ID\n",
+        "height": 208,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3040,
+        -800
+      ],
+      "typeVersion": 1,
+      "id": "7a2105fa-b6b5-4567-96e8-6c48b69b14df",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Récupère la liste des posts depuis la structure Reddit standard\n// On suppose que l'input est le JSON complet que tu m'as montré\nconst posts = items[0].json.data.children;\n\n// Fonction de tri\nposts.sort((a, b) => {\n  // 1. D'abord on compare le Score (Net Upvotes)\n  // On veut le plus grand en premier, donc b - a\n  const scoreDiff = b.data.score - a.data.score;\n  \n  // Si les scores sont différents, on utilise ça\n  if (scoreDiff !== 0) {\n    return scoreDiff;\n  }\n  \n  // 2. Si les scores sont égaux, on départage par le nombre de commentaires\n  return b.data.num_comments - a.data.num_comments;\n});\n\n// Optionnel : Filtrer les posts de mauvaises qualité\n// Garde uniquement ceux avec un ratio > 0.60 (60% de likes positifs) et au moins 1 commentaire\nconst filteredPosts = posts.filter(post => {\n  return post.data.upvote_ratio > 0.60 && post.data.num_comments > 0;\n});\n\n// Retourne les données propres pour la suite du workflow\n// On renvoie directement l'objet 'data' qui contient title, selftext, url, etc.\nreturn filteredPosts.map(post => ({\n  json: post.data\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4048,
+        -768
+      ],
+      "id": "21e6e5fc-084f-4136-870e-9d3671092267",
+      "name": "Filter best post"
+    },
+    {
+      "parameters": {
+        "url": "YOUR_REDDIT_JSON_URL",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        3824,
+        -768
+      ],
+      "id": "0f0e8cc6-c796-46c7-9b57-dde8a667e427",
+      "name": "Retrieve JSON reddit"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Automatisation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "YOUR_SHEET_GID",
+          "mode": "list",
+          "cachedResultName": "Reddit Post",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=YOUR_SHEET_GID"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Sub reddit",
+              "lookupValue": "={{ $json.subreddit }}"
+            },
+            {
+              "lookupColumn": "Used ?",
+              "lookupValue": "Yes"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": false
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4272,
+        -768
+      ],
+      "id": "287c51f3-b541-4ccd-ad74-3b5315748259",
+      "name": "Read used post",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// VERIFICATION — prend le 1er post NON utilisé\n// IMPORTANT: le node doit s'appeler EXACTEMENT \"Filter best post\" et \"Read used post\"\n\nconst candidates = $('Filter best post').all().map(i => i.json);\nconst usedRows   = $('Read used post').all().map(i => i.json);\n\nconst normalize = (s) =>\n  String(s || '')\n    .trim()\n    .toLowerCase()\n    .replace(/\\s+/g, ' ')\n    .replace(/[’']/g, \"'\");\n\nconst getCandidateTitle = (p) => p.title ?? p.Title ?? '';\nconst getUsedRowTitle   = (r) => r.Title ?? r.Tittle ?? r.title ?? '';\n\nconst isUsedYes = (v) => {\n  const s = String(v ?? '').trim().toLowerCase();\n  return ['yes', 'y', 'true', '1', 'oui'].includes(s);\n};\n\n// titres utilisés (Used ? = Yes)\nconst usedTitles = new Set();\nfor (const r of usedRows) {\n  const usedVal = r['Used ?'] ?? r['Used?'] ?? r.Used ?? r.used;\n  if (!isUsedYes(usedVal)) continue;\n\n  const t = normalize(getUsedRowTitle(r));\n  if (t) usedTitles.add(t);\n}\n\n// choisir le premier candidat non utilisé\nlet chosen = null;\nfor (const p of candidates) {\n  const t = normalize(getCandidateTitle(p));\n  if (!t) continue;\n  if (!usedTitles.has(t)) { chosen = p; break; }\n}\n\nif (!chosen) {\n  return [{\n    json: {\n      _debug: true,\n      message: \"Aucun post non utilisé trouvé dans Filter best post.\",\n      candidates_count: candidates.length,\n      used_yes_count: usedTitles.size,\n      sample_candidates_titles: candidates.slice(0, 10).map(x => getCandidateTitle(x)),\n      sample_used_titles: Array.from(usedTitles).slice(0, 10),\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ...chosen,\n    _verification: {\n      chosenTitle: getCandidateTitle(chosen),\n      candidates_count: candidates.length,\n      used_yes_count: usedTitles.size,\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4496,
+        -768
+      ],
+      "id": "804d90c8-427c-4c21-9fc5-68845c86564d",
+      "name": "Verification"
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-sonnet-4.5",
+        "options": {
+          "frequencyPenalty": 0,
+          "presencePenalty": 0,
+          "temperature": 0.7,
+          "topP": 0.9
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        4720,
+        -608
+      ],
+      "id": "d4e3a86e-c98d-44f5-8662-6ce87eb02c2a",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "YOUR_OPENROUTER_CREDENTIAL_ID",
+          "name": "OpenRouter"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es \"RedditToXThread\" - un ghostwriter spécialisé dans la transformation de posts Reddit en threads X viraux, avec un angle storytelling captivant.\n\nTu vas recevoir 2 entrées:\n- reddit_post = {{ $json.title }} et {{ $json.selftext }}\n\nTa mission:\nTransformer ce reddit_post en un thread X de 4-5 tweets, en respectant STRICTEMENT les règles du system prompt (hook + arc narratif, simple english, phrases courtes, pas de chiffres exacts, pas de Reddit, pas de CTA, etc).\n\nRéponds UNIQUEMENT avec ce JSON (format exact):\n{\n  \"tweets\": [\n    { \"order\": 1, \"text\": \"...\" },\n    { \"order\": 2, \"text\": \"...\" },\n    { \"order\": 3, \"text\": \"...\" },\n    { \"order\": 4, \"text\": \"...\" },\n    { \"order\": 5, \"text\": \"...\" }\n  ]\n}\n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Tu es **\"RedditToXThread\"** - un ghostwriter spécialisé dans la transformation de posts Reddit en threads X viraux, avec un angle storytelling captivant.\n\n## Mission\n\nTransformer UN post Reddit en un **thread de 4-5 tweets** qui raconte une **histoire captivante** en reprenant :\n- **L'arc narratif** du post Reddit (problème → solution → résultat)\n- **Les insights clés** (ce que l'auteur a appris)\n- **Le ton authentique** (comme si c'était ton vécu)\n\n---\n\n## Entrée (JSON)\n\n```json\n{\n  \"reddit_post\": {\n    \"title\": \"string\",\n    \"content\": \"string\",\n    \"subreddit\": \"string\"\n  },\n  \"style_reference_tweets\": [\"string\", ...]\n}\n```\n\n---\n\n## Pré-traitement (OBLIGATOIRE)\n\nNettoie mentalement le post Reddit en ignorant :\n- Références aux subreddits (r/entrepreneur, r/startups, etc.)\n- Mentions de usernames Reddit (u/xxx)\n- Upvotes/awards mentionnés\n- TL;DR (reformule plutôt)\n- Liens et références externes\n- **Toutes les données personnelles de l'auteur original** :\n  - Revenus précis (ex: \"$45k MRR\", \"made $10,000\")\n  - Âge/localisation de l'auteur\n  - Noms d'entreprises/produits spécifiques\n  - Statistiques personnelles exactes\n\n**⚠️ RÈGLE CRITIQUE :**\n**N'INVENTE JAMAIS de données personnelles me concernant.**\n- ❌ Ne reprends pas les chiffres exacts du post Reddit comme si c'étaient les tiens\n- ❌ Ne dis pas \"I made $50k\" si c'est le chiffre de l'auteur Reddit\n- ❌ N'invente pas de métriques précises\n\n**Reformule les résultats de manière générique :**\n- ✅ \"The business took off\"\n- ✅ \"Revenue started growing fast\"\n- ✅ \"We hit profitability sooner than expected\"\n- ✅ Ou utilise des fourchettes vagues : \"6-figure revenue\", \"doubled in months\"\n\n---\n\n## STYLE À IMITER (Storytelling authentique)\n\n### Caractéristiques du style :\n\n1. **Narratif et immersif**\n   - \"3 years ago, I had no money and no plan.\"\n   - \"Then something changed.\"\n   - \"Here's the full story.\"\n\n2. **Tension + résolution**\n   - Crée un arc : situation initiale → conflit → tournant → résolution\n   - Garde le lecteur accroché à chaque tweet\n\n3. **Phrases courtes et punchy**\n   - Max 12 mots par phrase\n   - Retours à la ligne pour créer du rythme\n   - Chaque phrase = un beat de l'histoire\n\n4. **Ton personnel et vulnérable**\n   - Assume les galères, les doutes\n   - \"I almost stopped\" est plus puissant que \"It was challenging\"\n   - Authenticité > perfection\n\n5. **Insights actionnables**\n   - Termine avec ce que les gens peuvent apprendre\n   - La leçon doit être claire et mémorable\n\n6. **SIMPLE ENGLISH (très important)**\n   - Vocabulaire simple, accessible à tous (non-natifs inclus)\n   - Pas de jargon business complexe\n   - Pas d'expressions idiomatiques obscures\n   - Mots courants > mots rares\n   \n   ❌ ÉVITER :\n   - \"I pivoted my approach\" → ✅ \"I changed my method\"\n   - \"Revenue compounded\" → ✅ \"Revenue grew fast\"\n   - \"The traction picked up\" → ✅ \"Things started working\"\n   - \"Crushed it\" → ✅ \"It worked really well\"\n   - \"Beneath me\" → ✅ \"Too low for me\"\n   - \"Game-changer\" → ✅ \"Changed everything\"\n   - \"Leverage\" → ✅ \"Use\"\n   - \"Iterate\" → ✅ \"Improve\" ou \"Try again\"\n\n---\n\n## RÈGLES DE GÉNÉRATION\n\n### 1) HOOK (Tweet 1) - ULTRA IMPORTANT\n\nLe Tweet 1 décide si on lit la suite. Techniques pour Reddit :\n\n- **Situation choc** : \"I was $50k in debt with no job. 2 years later? Freedom.\"\n- **Transformation** : \"From sleeping in my car to running a profitable business.\"\n- **Curiosité** : \"One decision changed my entire life trajectory.\"\n- **Contraste temporel** : \"3 years ago: rock bottom. Today: different story.\"\n\n**⚠️ OBLIGATOIRE : Termine le Tweet 1 par 🧵⤵️**\n\n### 2) STRUCTURE STORYTELLING (Adaptée aux posts Reddit)\n\n**Format principal - Arc narratif complet :**\n\n- Tweet 1: Hook émotionnel / situation de départ 🧵⤵️\n- Tweet 2: Le contexte + pourquoi c'était difficile\n- Tweet 3: Le tournant + l'action concrète\n- Tweet 4: Les résultats\n- Tweet 5: La leçon / takeaway\n\n**Format alternatif - Transformation :**\n\n- Tweet 1: Promesse de l'histoire 🧵⤵️\n- Tweet 2: La galère / le problème\n- Tweet 3: Le déclic + ce qui a changé\n- Tweet 4: Le résultat + la leçon\n\n### 3) PHRASES COURTES\n\n❌ INTERDIT :\n\"When I started my entrepreneurial journey three years ago after getting laid off from my corporate job, I had no idea what I was doing and made countless mistakes.\"\n\n✅ OBLIGATOIRE :\n\"3 years ago.\nLaid off. No plan.\nI knew nothing about business.\n\nMade every mistake in the book.\n\nBest thing that ever happened to me.\"\n\n### 4) ÉMOTIONS ET VULNÉRABILITÉ\n\nLes posts Reddit sont souvent vulnérables. Capitalise dessus :\n\n- ✅ \"I was terrified.\"\n- ✅ \"Everyone told me I was crazy.\"\n- ✅ \"I almost quit 100 times.\"\n- ❌ \"The journey had its challenges.\" (trop corporate)\n\n### 5) TRANSITIONS ENTRE TWEETS\n\nChaque tweet doit donner envie de lire le suivant :\n\n- \"But then...\" \n- \"That's when everything changed.\"\n- \"Here's what I did next.\"\n- \"The turning point?\"\n\n### 6) EMOJIS\n\n- Tweet 1 : 🧵⤵️ à la fin (OBLIGATOIRE)\n- Autres tweets : 2-3 emojis max par tweet\n- Utilise des emojis qui **renforcent l'émotion** :\n  - 💀 pour les moments difficiles\n  - 🚀 pour le décollage\n  - 💡 pour les insights\n  - ⚡ pour les tournants\n- Pas de spam d'emojis\n\n---\n\n## LONGUEUR\n\n**Chaque tweet : 180-270 caractères** (sauts de ligne inclus)\n**Thread total : 4-5 tweets**\n\n---\n\n## INTERDICTIONS\n\n- ❌ Call-to-action (\"DM me\", \"comment\", \"follow for more\")\n- ❌ Liens\n- ❌ Mentions @\n- ❌ Symboles \"—\" et \"→\"\n- ❌ Phrases > 12 mots\n- ❌ Ton corporate/formel\n- ❌ Reprendre les chiffres exacts du post Reddit\n- ❌ Mentionner Reddit ou le subreddit source\n- ❌ Copier des phrases entières du post original\n\n---\n\n## EXEMPLES DE BONS OUTPUTS\n\n### Exemple 1 - Post Reddit \"How I went from $0 to profitable in 18 months\"\n\n```json\n{\n  \"tweets\": [\n    { \"order\": 1, \"text\": \"18 months ago I had $200 in my bank account.\\n\\nNo job. No plan. Just desperation.\\n\\nToday? Running a profitable business.\\n\\nHere's the real story. 🧵⤵️\" },\n    { \"order\": 2, \"text\": \"The first 6 months were brutal. 💀\\n\\nNo customers. No traction.\\nJust me, my laptop, and doubt.\\n\\nEveryone told me to get a 'real job'.\" },\n    { \"order\": 3, \"text\": \"Then I made one decision.\\n\\nStopped building what I thought was cool.\\nStarted solving problems people pay to fix. ⚡\\n\\nWithin weeks: first sale.\" },\n    { \"order\": 4, \"text\": \"Now? Business is profitable.\\n\\nNot rich. But free.\\nNo boss. No ceiling.\\n\\nRock bottom was the best foundation. 🚀\" },\n    { \"order\": 5, \"text\": \"The lesson?\\n\\nYou don't need a perfect plan.\\nYou don't need to be special.\\n\\nJust start. And refuse to stop.\" }\n  ]\n}\n```\n\n### Exemple 2 - Post Reddit sur un pivot business réussi\n\n```json\n{\n  \"tweets\": [\n    { \"order\": 1, \"text\": \"My first startup failed spectacularly.\\n\\n8 months of work. Zero customers.\\n\\nThe pivot that followed? Best decision I ever made. 🧵⤵️\" },\n    { \"order\": 2, \"text\": \"I was building a feature-packed app.\\n\\nNobody asked for it. Nobody needed it.\\n\\nI was solving MY problems, not theirs. 💀\" },\n    { \"order\": 3, \"text\": \"Then a user said: 'I just wish you did X instead.'\\n\\nI killed 80% of features. ⚡\\nFocused on that ONE thing.\\n\\nScariest pivot of my life.\" },\n    { \"order\": 4, \"text\": \"Within a month: paying customers.\\n\\nNot because I was smarter.\\nBecause I finally listened.\\n\\nThe market was screaming. 🚀\" },\n    { \"order\": 5, \"text\": \"The lesson? 💡\\n\\nYour customers know what they need.\\nYou don't.\\n\\nShut up and listen.\" }\n  ]\n}\n```\n\n---\n\n## SORTIE (format exact)\n\nTu dois sortir **UNIQUEMENT** ce JSON :\n\n```json\n{\n  \"tweets\": [\n    { \"order\": 1, \"text\": \"...\" },\n    { \"order\": 2, \"text\": \"...\" },\n    { \"order\": 3, \"text\": \"...\" },\n    { \"order\": 4, \"text\": \"...\" },\n    { \"order\": 5, \"text\": \"...\" }\n  ]\n}\n```\n\n- `order` commence à 1\n- `text` = tweet (180-270 caractères)\n- 4-5 tweets au total"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        4720,
+        -768
+      ],
+      "id": "dac70365-ab34-45f2-9171-51c28a391fa2",
+      "name": "Thread agent",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"tweets\": [\n    { \"order\": 1, \"text\": \"...\" },\n    { \"order\": 2, \"text\": \"...\" },\n    { \"order\": 3, \"text\": \"...\" },\n    { \"order\": 4, \"text\": \"...\" },\n    { \"order\": 5, \"text\": \"...\" }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        4896,
+        -608
+      ],
+      "id": "78a0e0a1-936e-4cdd-b589-281e1f1ab639",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.tweets",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        5104,
+        -768
+      ],
+      "id": "b8ad926c-198e-4401-9f85-a764c8fdb474",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Node: Passthrough / Témoin\n// Renvoie exactement ce qui a été reçu sans modification\n// Préserve les erreurs et métadonnées si présentes\n\nreturn items.map(item => ({\n  json: item.json,\n  binary: item.binary,\n  error: item.error,\n  pairedItem: item.pairedItem\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5232,
+        -624
+      ],
+      "id": "0b4c95d7-844d-4256-99f9-ae30df1d7128",
+      "name": "REDIRECTION",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "name": "Replace Me2",
+      "typeVersion": 1,
+      "position": [
+        4848,
+        -192
+      ],
+      "id": "447182fc-7a67-4372-abcd-c2db73e4c2e8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"reply\": {\n    \"in_reply_to_tweet_id\": \"{{ $json.lastTweetId }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4304,
+        -192
+      ],
+      "id": "a39f1bc8-8999-455d-b30e-221f5410f33b",
+      "name": "Post reply",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YOUR_TWITTER_CREDENTIAL_ID",
+          "name": "X account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": {{ JSON.stringify($json.text) }},\n  \"community_id\": \"YOUR_COMMUNITY_ID\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        4304,
+        -368
+      ],
+      "id": "dadd33e4-88c4-4920-850b-923f849182df",
+      "name": "Post first tweet",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "YOUR_TWITTER_CREDENTIAL_ID",
+          "name": "X account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the workflow static data (persists across loop iterations)\nconst staticData = $getWorkflowStaticData('global');\n\n// Store the tweet ID from the input (inside data wrapper)\nconst tweetId = $input.first().json.data.id;\n\n// Save firstTweetId only on the first iteration (if not already set)\nif (!staticData.firstTweetId) {\n  staticData.firstTweetId = tweetId;\n}\n\n// Save lastTweetId (updated every iteration)\nstaticData.lastTweetId = tweetId;\n\n// Return the data with the tweet IDs\nreturn [{\n  json: {\n    ...$input.first().json,\n    storedTweetId: tweetId,\n    firstTweetId: staticData.firstTweetId,\n    lastTweetId: staticData.lastTweetId,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4576,
+        -368
+      ],
+      "id": "ac14c8d0-c40a-4237-b8bf-05bb2eca1f40",
+      "name": "Store 1st Tweet ID + lastTweetID"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the workflow static data (persists across loop iterations)\nconst staticData = $getWorkflowStaticData('global');\n\n// Store the tweet ID from the input (inside data wrapper)\nconst tweetId = $input.first().json.data.id;\n\n// Save to static data\nstaticData.lastTweetId = tweetId;\n\n// Return the data with the tweet ID\nreturn [{\n  json: {\n    ...$input.first().json,\n    lastTweetId: tweetId,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4576,
+        -192
+      ],
+      "id": "c6b0859c-32dd-4884-8601-6c8492293758",
+      "name": "Store lastTweetId"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        3632,
+        -384
+      ],
+      "id": "6ea029fb-b140-4758-b5a7-d1bb258e625c",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3872,
+        -432
+      ],
+      "id": "b4f48cba-3b90-4afb-bb9e-19e5dd7ec963",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b5d25c2e-73fe-4dfc-aad6-1dd7be13d37d",
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3872,
+        -256
+      ],
+      "id": "5761092e-4656-4e03-807f-e58ecc56d16c",
+      "name": "If first item?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the workflow static data (persists across loop iterations)\nconst staticData = $getWorkflowStaticData('global');\n\n// READ the lastTweetId that was stored by the previous iteration\nconst lastTweetId = staticData.lastTweetId;\n\n// Return the input data + the stored lastTweetId\nreturn [{\n  json: {\n    ...$input.first().json,\n    lastTweetId: lastTweetId,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4096,
+        -192
+      ],
+      "id": "5384b876-cb8d-40f8-8568-52c00ab41008",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        5312,
+        -976
+      ],
+      "id": "5b95dac0-56e5-4698-8bc1-2cf05153477c",
+      "name": "No Operation, do nothing2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        5040,
+        -976
+      ],
+      "id": "51b803db-4112-4de5-b02d-75e159086937",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        5536,
+        -448
+      ],
+      "id": "5cbd45ef-4d61-4a6e-9715-9808440c72de",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Automatisation",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "YOUR_SHEET_GID",
+          "mode": "list",
+          "cachedResultName": "Reddit Post",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=YOUR_SHEET_GID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.title }}",
+            "Description": "={{ $json.selftext }}",
+            "Sub reddit": "={{ $json.subreddit }}",
+            "Used ?": "Yes"
+          },
+          "matchingColumns": [
+            "Title"
+          ],
+          "schema": [
+            {
+              "id": "Sub reddit",
+              "displayName": "Sub reddit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Used ?",
+              "displayName": "Used ?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5744,
+        -448
+      ],
+      "id": "9448d9e8-d2e5-4abd-a51a-32e36f0308ad",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 12,21 * * *"
+            }
+          ]
+        }
+      },
+      "id": "8e85f67c-e0a4-4d95-ba16-884adbfc9d28",
+      "name": "All days at 12h and 21h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        3600,
+        -768
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "content": "## JSON\nLook at this tweet to understand: https://x.com/YOUR_USERNAME/status/YOUR_TWEET_ID\n\nI will adapt the JSON weekly and add other subreddit to scrape \n",
+        "height": 400,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3728,
+        -960
+      ],
+      "typeVersion": 1,
+      "id": "0ed044ea-3016-48aa-a413-631ab01091ab",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## LLM\n\nConnect the LLM  you want, i use openRouter but it could be any API\n",
+        "height": 624,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4672,
+        -1088
+      ],
+      "typeVersion": 1,
+      "id": "74e8fab4-30cd-43a3-aa87-9bf4587e5eb6",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Google sheet\nConfigure your google sheet credential\n\nSheet available here: https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID\n",
+        "height": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4208,
+        -1056
+      ],
+      "typeVersion": 1,
+      "id": "a1711f44-bc46-425c-ad63-6242a2dd21db",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Google sheet\nConfigure your google sheet credential\n\nSheet available here: https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID\n",
+        "height": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5680,
+        -736
+      ],
+      "typeVersion": 1,
+      "id": "08123711-e66a-426e-a05a-0fe3bd0bb87d",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n## X API\nConfigure your X API credentials\n",
+        "height": 544
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4240,
+        -416
+      ],
+      "typeVersion": 1,
+      "id": "b10ccd38-eb83-4254-bad2-e61bd4566899",
+      "name": "Sticky Note5"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Retrieve JSON reddit": {
+      "main": [
+        [
+          {
+            "node": "Filter best post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter best post": {
+      "main": [
+        [
+          {
+            "node": "Read used post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read used post": {
+      "main": [
+        [
+          {
+            "node": "Verification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Thread agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Thread agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verification": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Thread agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Thread agent": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "REDIRECTION",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Replace Me2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post reply": {
+      "main": [
+        [
+          {
+            "node": "Store lastTweetId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post first tweet": {
+      "main": [
+        [
+          {
+            "node": "Store 1st Tweet ID + lastTweetID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store 1st Tweet ID + lastTweetID": {
+      "main": [
+        [
+          {
+            "node": "Replace Me2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store lastTweetId": {
+      "main": [
+        [
+          {
+            "node": "Replace Me2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "REDIRECTION": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If first item?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If first item?": {
+      "main": [
+        [
+          {
+            "node": "Post first tweet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Post reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing1": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "All days at 12h and 21h": {
+      "main": [
+        [
+          {
+            "node": "Retrieve JSON reddit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "YOUR_VERSION_ID",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "YOUR_WORKFLOW_ID",
+  "tags": []
+}
