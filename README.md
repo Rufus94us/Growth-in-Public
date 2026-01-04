@@ -53,7 +53,7 @@ Retrieve tweets from any X user using **APIFY** (Twitter Scraper). Ideal if you 
 - 📊 Save to Google Sheets automatically
 
 [⬇️ Download "Get content from X - APIFY" workflow JSON](https://raw.githubusercontent.com/Rufus94us/Growth-in-Public/refs/heads/main/N8N/Get%20content%20from%20X/Get%20content%20from%20X%20-%20APIFY.json)
-[⬇️ Download Google Sheet](https://docs.google.com/spreadsheets/d/e/2PACX-1vQFBYuR88v2Rf3s0ivdGau1QZo0nWT41ZdyfCoqKSTSafLcCZXN6ywUT-Kj4ty-H2pF9jqEfN5YSsgg/pub?output=xlsx)
+[⬇️ Download Google Sheet](hhttps://docs.google.com/spreadsheets/d/e/2PACX-1vQFBYuR88v2Rf3s0ivdGau1QZo0nWT41ZdyfCoqKSTSafLcCZXN6ywUT-Kj4ty-H2pF9jqEfN5YSsgg/pub?output=xlsx)
 
 ### Post on X - Threads from Reddit Post
 Turn viral Reddit posts into engaging Twitter threads automatically using AI.
